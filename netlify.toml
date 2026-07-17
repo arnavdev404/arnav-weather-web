@@ -8,9 +8,26 @@
 [functions]
   node_bundler = "esbuild"
 
+[[redirects]]
+  from = "/api/weather"
+  to = "/.netlify/functions/weather?endpoint=weather"
+  status = 200
+  force = true
 
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/weather?endpoint=:splat"
+  from = "/api/forecast"
+  to = "/.netlify/functions/weather?endpoint=forecast"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/geocode"
+  to = "/.netlify/functions/weather?endpoint=geocode"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/air-quality"
+  to = "/.netlify/functions/weather?endpoint=air-quality"
   status = 200
   force = true
