@@ -1,0 +1,13 @@
+ARNAV WEATHER WEB
+
+FIRST-TIME SETUP
+1. Double-click SETUP-WINDOWS.bat
+2. Add your key to .env:
+   OPENWEATHER_API_KEY=your_real_key
+   PORT=5055
+3. Save and close Notepad.
+4. Double-click START-WEBSITE.bat
+5. Open http://localhost:5055
+
+Do not open index.html directly.
+Run commands only in the folder that contains package.json.

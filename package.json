@@ -1,0 +1,21 @@
+{
+  "name": "arnav-weather-web",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Arnav Weather Web with responsive navigation, light/dark themes, forecasts, air quality, favorites, and a secure OpenWeather API proxy.",
+  "author": "Arnav",
+  "license": "MIT",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check scripts/theme.js && node --check scripts/router.js && node --check scripts/weather.js && node --check scripts/api.js && node --check scripts/search.js && node --check scripts/favorites.js && node --check scripts/settings.js && node --check scripts/air-quality.js && node --check scripts/animations.js && node --check scripts/navigation.js && node --check scripts/main.js && node --check netlify/functions/weather.js && node --check sw.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0"
+  }
+}

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Arnav Weather Web — Real-Time Weather Dashboard</title>
+<meta content="Arnav Weather Web — Real-time weather, forecasts, air quality, favorites, responsive navigation, and light/dark themes." name="description"/>
+<meta content="Arnav" name="author"/>
+<meta content="#F6FBFF" name="theme-color"/>
+<!-- Open Graph -->
+<meta content="Arnav Weather Web" property="og:title"/>
+<meta content="Real-time weather dashboard with forecasts, air quality, favorites, and light/dark themes." property="og:description"/>
+<meta content="website" property="og:type"/>
+<!-- Favicon -->
+<link href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;text y='.9em' font-size='90'&gt;⛅&lt;/text&gt;&lt;/svg&gt;" rel="icon"/>
+<!-- Anti-flash theme script — must run before any render -->
+<script>
+    (function() {
+      var key = 'arnav-weather-theme';
+      var saved = localStorage.getItem(key);
+      var theme = 'light';
+      if (saved === 'light' || saved === 'dark') {
+        theme = saved;
+      } else if (saved === 'system' || !saved) {
+        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        registrations.forEach(function(registration) { registration.unregister(); });
+      }).catch(function() {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        return Promise.all(keys.map(function(key) { return caches.delete(key); }));
+      }).catch(function() {});
+    }
+  </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+
+
+<!-- Styles (order matters) -->
+<link href="styles/variables.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/base.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/layout.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/navigation.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/components.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/pages.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/animations.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/theme-switch.css?v=2.1.0" rel="stylesheet"/>
+<link href="styles/responsive.css?v=2.1.0" rel="stylesheet"/>
+</head>
+<body class="aw-theme-loading">
+<!-- ══════════════════════════════════════════════════════════
+     APP LOADER
+     ══════════════════════════════════════════════════════════ -->
+<div aria-label="Loading Arnav Weather Web" aria-live="polite" class="aw-app-loader" id="aw-app-loader" role="status">
+<div class="aw-app-loader__visual">
+<div class="aw-loader-sun"></div>
+<div class="aw-loader-cloud--back"></div>
+<div class="aw-loader-cloud--front"></div>
+</div>
+<div class="aw-app-loader__brand"><span>Arnav</span> Weather Web</div>
+<div class="aw-loader-message" id="aw-loader-message">Detecting your location…</div>
+<div aria-hidden="true" class="aw-loader-dots">
+<div class="aw-loader-dot"></div>
+<div class="aw-loader-dot"></div>
+<div class="aw-loader-dot"></div>
+</div>
+</div>
+<!-- Weather background layer -->
+<div aria-hidden="true" class="aw-weather-bg" id="aw-weather-bg"></div>
+<!-- Toast container -->
+<div aria-atomic="true" aria-live="polite" id="aw-toast-container"></div>
+<!-- ══════════════════════════════════════════════════════════
+     APP SHELL
+     ══════════════════════════════════════════════════════════ -->
+<div id="aw-app">
+<!-- ════════════════════════════════════════════════════════
+       DESKTOP SIDEBAR NAVIGATION
+       ════════════════════════════════════════════════════════ -->
+<aside aria-label="Main navigation" class="aw-sidebar" role="navigation">
+<!-- Logo -->
+<a aria-label="Arnav Weather Web Home" class="aw-sidebar__logo" href="#">
+<div aria-hidden="true" class="aw-sidebar__logo-icon">
+<i class="fas fa-cloud-sun"></i>
+</div>
+<div class="aw-sidebar__logo-text">
+<span class="aw-sidebar__logo-top">Arnav</span>
+<span class="aw-sidebar__logo-bottom">Weather Web</span>
+
+</div>
+</a>
+<!-- Collapse toggle -->
+<button aria-label="Collapse sidebar" class="aw-sidebar__toggle" id="aw-sidebar-toggle" title="Collapse sidebar">
+<i class="fas fa-chevron-left"></i>
+</button>
+<!-- Nav items -->
+<nav aria-label="App pages" class="aw-sidebar__nav">
+<button aria-current="page" aria-label="Dashboard" class="aw-nav-item" data-route="dashboard">
+<span class="aw-nav-item__icon"><i class="fas fa-house"></i></span>
+<span class="aw-nav-item__label">Dashboard</span>
+<div aria-hidden="true" class="aw-tooltip">Dashboard</div>
+</button>
+<button aria-label="Search cities" class="aw-nav-item" data-route="search">
+<span class="aw-nav-item__icon"><i class="fas fa-magnifying-glass"></i></span>
+<span class="aw-nav-item__label">Search</span>
+<div aria-hidden="true" class="aw-tooltip">Search</div>
+</button>
+<button aria-label="Hourly forecast" class="aw-nav-item" data-route="hourly">
+<span class="aw-nav-item__icon"><i class="fas fa-clock"></i></span>
+<span class="aw-nav-item__label">Hourly</span>
+<div aria-hidden="true" class="aw-tooltip">Hourly</div>
+</button>
+<button aria-label="5-Day forecast" class="aw-nav-item" data-route="fiveday">
+<span class="aw-nav-item__icon"><i class="fas fa-calendar-days"></i></span>
+<span class="aw-nav-item__label">5 Day Forecast</span>
+<div aria-hidden="true" class="aw-tooltip">5 Day Forecast</div>
+</button>
+
+<button aria-label="Air quality" class="aw-nav-item" data-route="airquality">
+<span class="aw-nav-item__icon"><i class="fas fa-wind"></i></span>
+<span class="aw-nav-item__label">Air Quality</span>
+<div aria-hidden="true" class="aw-tooltip">Air Quality</div>
+</button>
+<button aria-label="Favorite cities" class="aw-nav-item" data-route="favorites">
+<span class="aw-nav-item__icon"><i class="fas fa-heart"></i></span>
+<span class="aw-nav-item__label">Favorites</span>
+<div aria-hidden="true" class="aw-tooltip">Favorites</div>
+</button>
+<button aria-label="Settings" class="aw-nav-item" data-route="settings">
+<span class="aw-nav-item__icon"><i class="fas fa-gear"></i></span>
+<span class="aw-nav-item__label">Settings</span>
+<div aria-hidden="true" class="aw-tooltip">Settings</div>
+</button>
+</nav>
+<!-- Profile -->
+<div class="aw-sidebar__profile">
+<button aria-label="Arnav's profile" class="aw-sidebar__profile-btn">
+<div aria-hidden="true" class="aw-sidebar__avatar">A</div>
+<div class="aw-sidebar__profile-info">
+<span class="aw-sidebar__profile-name">Arnav</span>
+<span class="aw-sidebar__profile-sub">Weather enthusiast</span>
+</div>
+</button>
+</div>
+</aside>
+<!-- ════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════════════════════════ -->
+<div class="aw-main">
+<!-- ── Top Header ── -->
+<header class="aw-header" role="banner">
+<div class="aw-header__left">
+<button aria-label="Toggle sidebar" class="aw-header__collapse-btn aw-btn--icon" id="aw-header-collapse" title="Toggle sidebar">
+<i class="fas fa-bars"></i>
+</button>
+<h1 class="aw-header__title" id="aw-header-title">Dashboard</h1>
+<!-- Header search bar -->
+<div class="aw-header__search">
+<div aria-controls="aw-header-suggestions" aria-expanded="false" aria-haspopup="listbox" class="aw-search-bar" role="combobox">
+
+<input aria-autocomplete="list" aria-controls="aw-header-suggestions" aria-label="Search city" autocomplete="off" class="aw-search-bar__input" id="aw-header-search-input" placeholder="Search city…" type="text"/>
+<button aria-label="Clear search" class="aw-search-bar__clear" id="aw-header-search-clear" style="display:none;">
+<i class="fas fa-times"></i>
+</button>
+<button aria-label="Search" class="aw-search-bar__submit" id="aw-header-search-submit" type="button">
+<i class="fas fa-magnifying-glass"></i>
+</button>
+</div>
+<div class="aw-search-suggestions" id="aw-header-suggestions" role="listbox" style="display:none;"></div>
+</div>
+</div>
+<div class="aw-header__right">
+<!-- Location button -->
+<button aria-label="Use current location" class="aw-btn--icon aw-search-bar__location-btn" id="aw-header-location-btn" title="Use my location">
+<i class="fas fa-location-crosshairs"></i>
+</button>
+<!-- Animated Theme Switch -->
+<label aria-label="Toggle theme" class="aw-theme-switch" title="Toggle light/dark mode">
+<input aria-label="Switch to dark mode" class="aw-theme-switch__input" type="checkbox"/>
+<div class="aw-theme-switch__track">
+<div aria-hidden="true" class="aw-theme-switch__clouds">
+<div class="aw-theme-switch__cloud aw-theme-switch__cloud--1"></div>
+<div class="aw-theme-switch__cloud aw-theme-switch__cloud--2"></div>
+<div class="aw-theme-switch__cloud aw-theme-switch__cloud--3"></div>
+</div>
+<div aria-hidden="true" class="aw-theme-switch__stars">
+<div class="aw-theme-switch__star aw-theme-switch__star--1"></div>
+<div class="aw-theme-switch__star aw-theme-switch__star--2"></div>
+<div class="aw-theme-switch__star aw-theme-switch__star--3"></div>
+<div class="aw-theme-switch__star aw-theme-switch__star--4"></div>
+</div>
+</div>
+<div aria-hidden="true" class="aw-theme-switch__sun"></div>
+<div aria-hidden="true" class="aw-theme-switch__moon"></div>
+</label>
+</div>
+</header>
+<!-- ── Page Views ── -->
+<main class="aw-page-content" id="aw-page-content">
+<!-- Global error (shown if init fails) -->
+<div class="aw-error-card aw-hidden" id="aw-global-error">
+<div class="aw-error-card__icon"><i class="fas fa-triangle-exclamation"></i></div>
+<div class="aw-error-card__title">Something went wrong</div>
+<div class="aw-error-card__body">Failed to initialize the application.</div>
+<button class="aw-btn aw-btn--primary" onclick="location.reload()" style="margin-top:var(--space-4);">
+<i class="fas fa-rotate-right"></i> Refresh Page
+        </button>
+</div>
+<!-- ════════════════════════
+           1. DASHBOARD
+           ════════════════════════ -->
+<section aria-label="Dashboard" class="aw-view" id="aw-view-dashboard">
+<div class="aw-dashboard-grid">
+<!-- Hero + Sunrise row -->
+<div class="aw-dashboard-hero">
+<!-- Current Weather Hero -->
+<div aria-label="Current weather" class="aw-weather-hero" role="region">
+<div class="aw-weather-hero__content">
+<div class="aw-weather-hero__location">
+<i class="fas fa-location-dot" style="color:var(--accent-primary);"></i>
+<span class="aw-weather-hero__city" id="aw-hero-city">Loading…</span>
+<button aria-label="Add to favorites" class="aw-btn-favorite" id="aw-fav-btn">
+<i class="far fa-heart"></i>
+</button>
+</div>
+<div class="aw-weather-hero__region" id="aw-hero-country"></div>
+<div class="aw-weather-hero__datetime">
+<span id="aw-hero-date"></span>
+<span style="color:var(--border-color);">·</span>
+<span id="aw-hero-time"></span>
+</div>
+<div class="aw-weather-hero__temp-row">
+<div>
+<div style="display:flex;align-items:flex-start;gap:4px;">
+<div class="aw-weather-hero__temp" id="aw-hero-temp">--</div>
+<div style="margin-top:10px;">
+<span id="aw-hero-temp-unit" style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text-primary);">°C</span>
+<button aria-label="Toggle temperature unit" class="aw-btn aw-btn--ghost aw-btn--sm" id="aw-unit-toggle" style="margin-left:4px;padding:4px 10px;font-size:var(--fs-xs);">Switch</button>
+</div>
+</div>
+<div class="aw-weather-hero__condition" id="aw-hero-condition">Loading…</div>
+<div class="aw-weather-hero__feels" id="aw-hero-feels">Feels like --°</div>
+</div>
+<div class="aw-weather-hero__icon-wrap">
+<div aria-label="Weather condition icon" class="aw-weather-hero__icon" id="aw-hero-icon">
+<i class="fas fa-cloud-sun" style="font-size:72px;color:var(--accent-primary);"></i>
+</div>
+</div>
+</div>
+<!-- Detail metrics in hero -->
+<div class="aw-weather-hero__details">
+<div class="aw-hero-detail">
+<i class="fas fa-droplet aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">Humidity</span>
+<span class="aw-hero-detail__value" id="aw-metric-humidity">--%</span>
+</div>
+</div>
+<div class="aw-hero-detail">
+<i class="fas fa-wind aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">Wind</span>
+<span class="aw-hero-detail__value" id="aw-metric-wind">-- km/h</span>
+</div>
+</div>
+<div class="aw-hero-detail">
+<i class="fas fa-gauge aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">Pressure</span>
+<span class="aw-hero-detail__value" id="aw-metric-pressure">-- hPa</span>
+</div>
+</div>
+<div class="aw-hero-detail">
+<i class="fas fa-eye aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">Visibility</span>
+<span class="aw-hero-detail__value" id="aw-metric-vis">-- km</span>
+</div>
+</div>
+<div class="aw-hero-detail">
+<i class="fas fa-sun aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">UV Index</span>
+<span class="aw-hero-detail__value" id="aw-metric-uv">--</span>
+</div>
+</div>
+<div class="aw-hero-detail">
+<i class="fas fa-cloud-rain aw-hero-detail__icon"></i>
+<div class="aw-hero-detail__info">
+<span class="aw-hero-detail__label">Rain Chance</span>
+<span class="aw-hero-detail__value" id="aw-metric-rain">--%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sunrise / Sunset -->
+<div class="aw-sun-card">
+<h2 class="aw-section-title" style="font-size:var(--fs-base);"><i class="fas fa-sun"></i> Sun Times</h2>
+<div class="aw-sun-item">
+<div class="aw-sun-item__icon aw-sun-item__icon--rise"><i class="fas fa-sunrise"></i></div>
+<div>
+<span class="aw-sun-item__label">Sunrise</span>
+<span class="aw-sun-item__time" id="aw-sunrise">--:--</span>
+</div>
+</div>
+<div class="aw-sun-item">
+<div class="aw-sun-item__icon aw-sun-item__icon--set"><i class="fas fa-sunset"></i></div>
+<div>
+<span class="aw-sun-item__label">Sunset</span>
+<span class="aw-sun-item__time" id="aw-sunset">--:--</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Hourly forecast -->
+<div class="aw-card" style="padding:var(--space-5);">
+<div class="aw-section-header">
+<h2 class="aw-section-title"><i class="fas fa-clock"></i> Hourly Forecast</h2>
+<div style="display:flex;gap:var(--space-2);">
+<button aria-label="Scroll hourly forecast left" class="aw-hourly-scroll-btn aw-hourly-scroll-btn--left" disabled="" id="aw-hourly-scroll-left"><i class="fas fa-chevron-left"></i></button>
+<button aria-label="Scroll hourly forecast right" class="aw-hourly-scroll-btn aw-hourly-scroll-btn--right" id="aw-hourly-scroll-right"><i class="fas fa-chevron-right"></i></button>
+</div>
+</div>
+<div class="aw-hourly-slider-wrap">
+<div aria-label="Hourly forecast" class="aw-hourly-slider" id="aw-hourly-slider" role="list">
+<!-- Populated by JS -->
+</div>
+</div>
+</div>
+<!-- 5-Day preview -->
+<div class="aw-card" style="padding:var(--space-5);">
+<div class="aw-section-header">
+<h2 class="aw-section-title"><i class="fas fa-calendar-days"></i> 5 Day Forecast</h2>
+<button class="aw-btn aw-btn--ghost aw-btn--sm" data-route="fiveday" onclick="window.awRouter?.navigate('fiveday')">View All</button>
+</div>
+<div aria-label="5-day forecast" class="aw-grid-auto" id="aw-fiveday-preview" role="list">
+<!-- Populated by JS -->
+</div>
+</div>
+<!-- Weather insights -->
+<div>
+<div class="aw-section-header">
+<h2 class="aw-section-title"><i class="fas fa-chart-bar"></i> Weather Insights</h2>
+</div>
+<div class="aw-grid-4" id="aw-insights" role="list">
+<!-- Populated by JS -->
+</div>
+</div>
+</div>
+</section>
+<!-- ════════════════════════
+           2. SEARCH
+           ════════════════════════ -->
+<section aria-label="Search cities" class="aw-view" id="aw-view-search">
+<div class="aw-search-page">
+<div class="aw-search-page__hero">
+<h1 class="aw-search-page__title">Search Cities</h1>
+<p class="aw-search-page__subtitle">Find real-time weather for any city worldwide</p>
+</div>
+<!-- Large search bar -->
+<div style="position:relative;">
+<div aria-controls="aw-search-suggestions" aria-expanded="false" aria-haspopup="listbox" class="aw-search-bar" role="combobox" style="padding:4px;">
+
+<input aria-autocomplete="list" aria-controls="aw-search-suggestions" aria-label="Search city" autocomplete="off" class="aw-search-bar__input" id="aw-search-input" placeholder="Search for a city (e.g. Tokyo, London, New York)…" type="text"/>
+<button aria-label="Clear search" class="aw-search-bar__clear" id="aw-search-clear" style="display:none;">
+<i class="fas fa-times"></i>
+</button>
+<button aria-label="Search weather" class="aw-search-bar__submit" id="aw-search-submit" type="button">
+<i class="fas fa-magnifying-glass"></i> Get Weather
+              </button>
+<button aria-label="Use my location" class="aw-search-bar__location-btn" id="aw-search-location-btn" title="Use current location">
+<i class="fas fa-location-crosshairs"></i>
+</button>
+</div>
+<div class="aw-search-suggestions" id="aw-search-suggestions" role="listbox" style="display:none;"></div>
+</div>
+<!-- Popular cities -->
+<div style="margin-top:var(--space-8);">
+<div class="aw-section-header">
+<h2 class="aw-section-title" style="font-size:var(--fs-base);"><i class="fas fa-fire"></i> Popular Cities</h2>
+</div>
+<div class="aw-popular-cities">
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('New York'); window.awRouter?.navigate('dashboard');">New York</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('London'); window.awRouter?.navigate('dashboard');">London</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Tokyo'); window.awRouter?.navigate('dashboard');">Tokyo</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Paris'); window.awRouter?.navigate('dashboard');">Paris</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Dubai'); window.awRouter?.navigate('dashboard');">Dubai</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Sydney'); window.awRouter?.navigate('dashboard');">Sydney</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Singapore'); window.awRouter?.navigate('dashboard');">Singapore</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Toronto'); window.awRouter?.navigate('dashboard');">Toronto</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Mumbai'); window.awRouter?.navigate('dashboard');">Mumbai</button>
+<button class="aw-city-chip" onclick="window.awApp?.loadCity('Berlin'); window.awRouter?.navigate('dashboard');">Berlin</button>
+</div>
+</div>
+</div>
+</section>
+<!-- ════════════════════════
+           3. HOURLY FORECAST
+           ════════════════════════ -->
+<section aria-label="Hourly forecast" class="aw-view" id="aw-view-hourly">
+<div class="aw-section-header">
+<h1 class="aw-section-title"><i class="fas fa-clock"></i> Hourly Forecast</h1>
+</div>
+<!-- Temperature chart -->
+<div class="aw-temp-chart">
+<h2 class="aw-section-title" style="font-size:var(--fs-base);margin-bottom:var(--space-3);">Temperature Trend</h2>
+<svg aria-label="Temperature chart" class="aw-temp-chart__svg" id="aw-temp-chart-svg" role="img"></svg>
+</div>
+<!-- Hourly list -->
+<div aria-label="Hourly weather details" class="aw-hourly-page-list" id="aw-hourly-list" role="list">
+<!-- Skeleton placeholders -->
+<div class="aw-skeleton" style="height:60px;border-radius:var(--radius-lg);"></div>
+<div class="aw-skeleton" style="height:60px;border-radius:var(--radius-lg);"></div>
+<div class="aw-skeleton" style="height:60px;border-radius:var(--radius-lg);"></div>
+</div>
+</section>
+<!-- ════════════════════════
+           4. FIVE-DAY FORECAST
+           ════════════════════════ -->
+<section aria-label="5-day forecast" class="aw-view" id="aw-view-fiveday">
+<div class="aw-section-header">
+<h1 class="aw-section-title"><i class="fas fa-calendar-days"></i> 5 Day Forecast</h1>
+</div>
+<div aria-label="5-day weather forecast" class="aw-fiveday-list" id="aw-fiveday-list" role="list">
+<div class="aw-skeleton aw-skeleton--card"></div>
+<div class="aw-skeleton aw-skeleton--card"></div>
+<div class="aw-skeleton aw-skeleton--card"></div>
+</div>
+</section>
+
+
+<!-- ════════════════════════
+           6. AIR QUALITY
+           ════════════════════════ -->
+<section aria-label="Air quality" class="aw-view" id="aw-view-airquality">
+<div class="aw-section-header">
+<h1 class="aw-section-title"><i class="fas fa-wind"></i> Air Quality</h1>
+</div>
+<div id="aw-aqi-content">
+<div class="aw-skeleton aw-skeleton--hero"></div>
+</div>
+<div class="aw-error-card aw-hidden" id="aw-aqi-error">
+<div class="aw-error-card__icon"><i class="fas fa-smog"></i></div>
+<div class="aw-error-card__title">Air Quality Unavailable</div>
+<div class="aw-error-card__body">Air quality data could not be loaded for this location.</div>
+<button class="aw-btn aw-btn--primary" onclick="window.awAirQuality?.render(window.awApp?.currentLat, window.awApp?.currentLon)">
+<i class="fas fa-rotate-right"></i> Try Again
+          </button>
+</div>
+</section>
+<!-- ════════════════════════
+           7. FAVORITES
+           ════════════════════════ -->
+<section aria-label="Favorite cities" class="aw-view" id="aw-view-favorites">
+<div class="aw-favorites-header">
+<h1 class="aw-section-title"><i class="fas fa-heart"></i> Favorite Cities</h1>
+<button aria-label="Refresh favorites" class="aw-btn aw-btn--ghost aw-btn--sm" onclick="window.awFavorites?.renderPage()">
+<i class="fas fa-rotate-right"></i> Refresh
+          </button>
+</div>
+<div aria-label="Favorite cities" class="aw-favorites-grid" id="aw-favorites-grid" role="list">
+<!-- Rendered by JS -->
+</div>
+<!-- Empty state -->
+<div class="aw-empty-state" id="aw-favorites-empty" style="display:none;">
+<span class="aw-empty-state__icon">🤍</span>
+<div class="aw-empty-state__title">No favorites yet</div>
+<p class="aw-empty-state__body">Tap the heart button on any city to save it here for quick access.</p>
+<button class="aw-btn aw-btn--primary" data-route="search" onclick="window.awRouter?.navigate('search')">
+<i class="fas fa-magnifying-glass"></i> Search Cities
+          </button>
+</div>
+</section>
+<!-- ════════════════════════
+           8. SETTINGS
+           ════════════════════════ -->
+<section aria-label="Settings" class="aw-view" id="aw-view-settings">
+<div class="aw-section-header">
+<h1 class="aw-section-title"><i class="fas fa-gear"></i> Settings</h1>
+</div>
+<div class="aw-settings-layout">
+<!-- Settings sidebar nav -->
+<nav aria-label="Settings categories" class="aw-settings-nav">
+<button class="aw-settings-nav-item aw-settings-nav-item--active" data-section="general"><i class="fas fa-sliders"></i> General</button>
+<button class="aw-settings-nav-item" data-section="appearance"><i class="fas fa-palette"></i> Appearance</button>
+<button class="aw-settings-nav-item" data-section="units"><i class="fas fa-ruler"></i> Units</button>
+<button class="aw-settings-nav-item" data-section="location"><i class="fas fa-location-dot"></i> Location</button>
+<button class="aw-settings-nav-item" data-section="privacy"><i class="fas fa-shield"></i> Privacy</button>
+<button class="aw-settings-nav-item" data-section="about"><i class="fas fa-info-circle"></i> About</button>
+</nav>
+<!-- Settings content -->
+<div class="aw-settings-content">
+<!-- General -->
+<div class="aw-settings-section" id="aw-settings-general">
+<h2 class="aw-settings-section__title"><i class="fas fa-sliders"></i> General</h2>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Default City</div>
+<div class="aw-setting-row__desc">City loaded on startup</div>
+</div>
+<div class="aw-setting-row__control">
+<input class="aw-select" id="aw-setting-default-city" placeholder="e.g. Mumbai" style="width:160px;" type="text"/>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Time Format</div>
+</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="timeFormat" id="aw-setting-time-format">
+<option value="12h">12-hour</option>
+<option value="24h">24-hour</option>
+</select>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Update Interval</div>
+</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="updateInterval" id="aw-setting-update-interval">
+<option value="5">5 minutes</option>
+<option value="10">10 minutes</option>
+<option value="30">30 minutes</option>
+<option value="60">1 hour</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Appearance -->
+<div class="aw-settings-section" id="aw-settings-appearance">
+<h2 class="aw-settings-section__title"><i class="fas fa-palette"></i> Appearance</h2>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Theme</div>
+<div class="aw-setting-row__desc">Choose your preferred color scheme</div>
+</div>
+<div class="aw-setting-row__control">
+<div class="aw-theme-options">
+<button class="aw-theme-option" data-theme="light"><i class="fas fa-sun"></i> Light</button>
+<button class="aw-theme-option" data-theme="dark"><i class="fas fa-moon"></i> Dark</button>
+<button class="aw-theme-option" data-theme="system"><i class="fas fa-circle-half-stroke"></i> System</button>
+</div>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Reduced Animations</div>
+<div class="aw-setting-row__desc">Disable motion effects</div>
+</div>
+<div class="aw-setting-row__control">
+<label class="aw-toggle">
+<input class="aw-toggle__input aw-settings-toggle" data-setting="reducedMotion" id="aw-setting-reduced-motion" type="checkbox"/>
+</label>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Compact Cards</div>
+<div class="aw-setting-row__desc">Use a denser card layout</div>
+</div>
+<div class="aw-setting-row__control">
+<label class="aw-toggle">
+<input class="aw-toggle__input aw-settings-toggle" data-setting="compactCards" id="aw-setting-compact-cards" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+<!-- Units -->
+<div class="aw-settings-section" id="aw-settings-units">
+<h2 class="aw-settings-section__title"><i class="fas fa-ruler"></i> Units</h2>
+<div class="aw-setting-row">
+<div class="aw-setting-row__label">Temperature</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="units" id="aw-setting-units">
+<option value="celsius">°C — Celsius</option>
+<option value="fahrenheit">°F — Fahrenheit</option>
+</select>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__label">Wind Speed</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="windUnit" id="aw-setting-wind-unit">
+<option value="kmh">km/h</option>
+<option value="mph">mph</option>
+</select>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__label">Pressure</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="pressureUnit" id="aw-setting-pressure-unit">
+<option value="hpa">hPa</option>
+<option value="inhg">inHg</option>
+</select>
+</div>
+</div>
+<div class="aw-setting-row">
+<div class="aw-setting-row__label">Distance / Visibility</div>
+<div class="aw-setting-row__control">
+<select class="aw-select aw-settings-select" data-setting="distUnit" id="aw-setting-dist-unit">
+<option value="km">Kilometres</option>
+<option value="miles">Miles</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Location -->
+<div class="aw-settings-section" id="aw-settings-location">
+<h2 class="aw-settings-section__title"><i class="fas fa-location-dot"></i> Location</h2>
+<div class="aw-setting-row">
+<div class="aw-setting-row__info">
+<div class="aw-setting-row__label">Use Current Location</div>
+<div class="aw-setting-row__desc">Automatically load weather for your current GPS location on startup. Browser location permission required.</div>
+</div>
+<div class="aw-setting-row__control">
+<label class="aw-toggle">
+<input class="aw-toggle__input aw-settings-toggle" data-setting="useLocation" id="aw-setting-use-location" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+<!-- Privacy -->
+<div class="aw-settings-section" id="aw-settings-privacy">
+<h2 class="aw-settings-section__title"><i class="fas fa-shield"></i> Privacy &amp; Data</h2>
+<div style="color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.7;">
+<p><strong>API Key Security:</strong> The OpenWeather API key is stored only in the server environment. It is never sent to your browser or included in any HTML, JavaScript, or response.</p>
+<p style="margin-top:var(--space-3);"><strong>Local Storage:</strong> Your preferences (theme, units, settings), recent searches, and favorite cities are stored locally in your browser's localStorage. No data is sent to any external analytics service.</p>
+</div>
+<div style="margin-top:var(--space-5);">
+<button class="aw-btn aw-btn--danger" id="aw-clear-data-btn">
+<i class="fas fa-trash"></i> Clear All App Data
+                </button>
+</div>
+</div>
+<!-- About -->
+<div class="aw-settings-section" id="aw-settings-about">
+<h2 class="aw-settings-section__title"><i class="fas fa-info-circle"></i> About</h2>
+<div style="margin-bottom:var(--space-4);">
+<div style="font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:4px;">
+<span style="color:var(--accent-primary);">Arnav</span> Weather Web
+                </div>
+<div style="color:var(--text-muted);font-size:var(--fs-sm);">Version 2.1.0</div>
+</div>
+<p style="color:var(--text-secondary);font-size:var(--fs-sm);margin-bottom:var(--space-4);">A modern weather dashboard with real-time forecasts, air quality monitoring, favorites, and a responsive light/dark theme system.</p>
+<div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--space-4);">Technology Stack:</div>
+<div class="aw-about-stack">
+<span class="aw-about-chip">HTML5</span>
+<span class="aw-about-chip">CSS3</span>
+<span class="aw-about-chip">Vanilla JS</span>
+<span class="aw-about-chip">Node.js</span>
+<span class="aw-about-chip">Express</span>
+<span class="aw-about-chip">OpenWeatherMap API</span>
+
+<span class="aw-about-chip">Font Awesome</span>
+<span class="aw-about-chip">Google Fonts</span>
+</div>
+<div style="margin-top:var(--space-5);font-size:var(--fs-sm);color:var(--text-muted);">
+                Made with <span style="color:var(--accent-error);">❤</span> by <strong style="color:var(--accent-primary);">Arnav</strong>
+</div>
+</div>
+</div><!-- /settings-content -->
+</div><!-- /settings-layout -->
+</section>
+</main><!-- /page-content -->
+<!-- ── Footer ── -->
+<footer class="aw-footer" role="contentinfo">
+<div class="aw-footer__brand">
+<i class="fas fa-cloud-sun aw-footer-cloud"></i>
+<span><strong style="color:var(--accent-primary);">Arnav</strong> Weather Web</span>
+</div>
+<div class="aw-footer__love">
+        Made with <i class="fas fa-heart aw-footer__heart"></i> by
+        <strong class="aw-footer__arnav">Arnav</strong>
+</div>
+</footer>
+</div><!-- /aw-main -->
+</div><!-- /#aw-app -->
+<!-- ════════════════════════════════════════════════════════════
+     MOBILE BOTTOM NAVIGATION
+     ════════════════════════════════════════════════════════════ -->
+<nav aria-label="Mobile navigation" class="aw-bottom-nav" role="navigation">
+<div class="aw-bottom-nav__items">
+<button aria-current="page" aria-label="Dashboard" class="aw-bottom-nav__item aw-nav-item--active aw-nav-item" data-route="dashboard">
+<div class="aw-bottom-nav__icon"><i class="fas fa-house"></i></div>
+<span class="aw-bottom-nav__label">Home</span>
+</button>
+<button aria-label="Search" class="aw-bottom-nav__item aw-nav-item" data-route="search">
+<div class="aw-bottom-nav__icon"><i class="fas fa-magnifying-glass"></i></div>
+<span class="aw-bottom-nav__label">Search</span>
+</button>
+<button aria-label="Hourly Forecast" class="aw-bottom-nav__item aw-nav-item" data-route="hourly"><div class="aw-bottom-nav__icon"><i class="fas fa-clock"></i></div><span class="aw-bottom-nav__label">Hourly</span></button><button aria-label="5-Day Forecast" class="aw-bottom-nav__item aw-nav-item" data-route="fiveday">
+<div class="aw-bottom-nav__icon"><i class="fas fa-calendar-days"></i></div>
+<span class="aw-bottom-nav__label">Forecast</span>
+</button>
+
+<button aria-expanded="false" aria-haspopup="true" aria-label="More options" class="aw-bottom-nav__item" id="aw-more-btn">
+<div class="aw-bottom-nav__icon"><i class="fas fa-ellipsis"></i></div>
+<span class="aw-bottom-nav__label">More</span>
+</button>
+</div>
+</nav>
+<!-- Mobile "More" menu -->
+<div aria-label="More navigation options" class="aw-more-menu" id="aw-more-menu" role="menu">
+
+<button class="aw-more-menu__item aw-nav-item" data-route="airquality" role="menuitem"><i class="fas fa-wind"></i> Air Quality</button>
+<button class="aw-more-menu__item aw-nav-item" data-route="favorites" role="menuitem"><i class="fas fa-heart"></i> Favorites</button>
+<button class="aw-more-menu__item aw-nav-item" data-route="settings" role="menuitem"><i class="fas fa-gear"></i> Settings</button>
+<div class="aw-divider"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) var(--space-4);">
+<span style="font-size:var(--fs-sm);color:var(--text-muted);">Theme</span>
+<label aria-label="Toggle theme" class="aw-theme-switch aw-theme-switch--sm">
+<input aria-label="Switch to dark mode" class="aw-theme-switch__input" type="checkbox"/>
+<div class="aw-theme-switch__track">
+<div aria-hidden="true" class="aw-theme-switch__clouds">
+<div class="aw-theme-switch__cloud aw-theme-switch__cloud--1"></div>
+<div class="aw-theme-switch__cloud aw-theme-switch__cloud--2"></div>
+</div>
+<div aria-hidden="true" class="aw-theme-switch__stars">
+<div class="aw-theme-switch__star aw-theme-switch__star--1"></div>
+<div class="aw-theme-switch__star aw-theme-switch__star--2"></div>
+</div>
+</div>
+<div aria-hidden="true" class="aw-theme-switch__sun"></div>
+<div aria-hidden="true" class="aw-theme-switch__moon"></div>
+</label>
+</div>
+</div>
+<!-- ════════════════════════════════════════════════════════════
+     SCRIPTS — order matters
+     ════════════════════════════════════════════════════════════ -->
+
+
+<!-- Theme init immediately -->
+<script src="scripts/theme.js?v=2.1.0"></script>
+<!-- Router before navigation -->
+<script src="scripts/router.js?v=2.1.0"></script>
+<!-- Weather service (unchanged) -->
+<script src="scripts/weather.js?v=2.1.0"></script>
+<!-- API client -->
+<script src="scripts/api.js?v=2.1.0"></script>
+<!-- Feature modules -->
+<script src="scripts/search.js?v=2.1.0"></script>
+<script src="scripts/favorites.js?v=2.1.0"></script>
+<script src="scripts/settings.js?v=2.1.0"></script>
+<script src="scripts/air-quality.js?v=2.1.0"></script>
+
+<script src="scripts/animations.js?v=2.1.0"></script>
+<!-- Navigation (after modules) -->
+<script src="scripts/navigation.js?v=2.1.0"></script>
+<!-- Main app controller (last) -->
+<script src="scripts/main.js?v=2.1.0"></script>
+<!-- Make body visible after scripts loaded -->
+<script>document.body.classList.remove('aw-theme-loading');</script>
+</body>
+</html>
